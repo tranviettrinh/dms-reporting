@@ -5,23 +5,6 @@ from modules.Product import Product
 from modules.Order import Order
 from modules.ListProducts import product_category_list 
 
-def get_category_by_product_code(product_code, product_category_list):
-    """
-    Tìm category tương ứng với một product_code cho trước.
-
-    Args:
-    product_code (str): Mã sản phẩm cần tìm category.
-    product_category_list (list): Danh sách các cặp [product_code, category].
-
-    Returns:
-    str: Category tương ứng hoặc None nếu không tìm thấy.
-    """
-    
-    for item in product_category_list:
-        if item[0] == product_code :
-            # print(item[0],product_code,item[1])
-            return item[1]
-    return None  # Trả về None nếu không tìm thấy mã sản phẩm trong danh sách
 
 
 # 1️⃣ API Xác thực để lấy Token
@@ -191,8 +174,7 @@ while con:
                     }
                     # Bổ sung thông tin sản phẩm vào bản ghi
                     filtered_records_product.append(product_info)
-                    product = Product(product_dict.get("product_code", ""), product_dict.get("description", ""), get_category_by_product_code(product_dict.get("product_code", ""),product_category_list), product_dict.get("price", ""), product_dict.get("total", ""))
-
+                    
                     order.add_item(
                         # customer_id = record.get("account_code","")
                         product_id=product_dict.get("product_code", ""),
@@ -204,8 +186,7 @@ while con:
                         total=product_dict.get("total", "")
                     )
 
-                    list_products.append(product)
-                    # list_orders.append(order)
+                 # list_orders.append(order)
                 list_orders.append(order)
             pagenum += 1
         else:
