@@ -1,15 +1,15 @@
 from modules.Product import Product
 from modules.Order import Order
 from modules.SalesReport import SalesReport
-from modules.ListSaleOrder import list_orders,list_products
-
+from modules.ListSaleOrder import list_orders
+from modules.ListProducts import lis
 def main():
     
     # Create an instance of SalesReport
     sales_report = SalesReport()
     
     # Add products and orders to the SalesReport
-    sales_report.add_products(list_products)
+    sales_report.add_products()
     for order in list_orders:
         sales_report.add_order(order)
     
