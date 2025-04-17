@@ -7,7 +7,8 @@ class Order:
         self.payment_due = payment_due  # Hạn thanh toán
         self.status = status  # Tình trạng đơn hàng
         self.items = []  # Danh sách các mặt hàng trong đơn
-
+    def get(self, attr, default=None):
+        return getattr(self, attr, default)
     def add_item(self, product_id, warehouse, unit, quantity, unit_price, amount, total):
         self.items.append({
             "product_id": product_id,

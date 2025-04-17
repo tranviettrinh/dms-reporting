@@ -1,3 +1,4 @@
+
 import pandas as pd
 from tabulate import tabulate
 pd.options.display.float_format = '{:,.2f}'.format  # Định dạng số thực với 2 chữ số thập phân
@@ -71,7 +72,7 @@ class SalesReport:
         # Định dạng lại cột Total Sales để hiển thị không dùng notations khoa học
         df['total_non_zero'] = df['total_non_zero'].apply(lambda x: f"{x:,.0f}")
         return tabulate(df, headers='keys', tablefmt='psql', showindex="always")
-
+    
     def __str__(self):
         report = f"Total Sales Value: {self.total_sales()} VND\n"
         report += "Detailed Sales Report:\n"

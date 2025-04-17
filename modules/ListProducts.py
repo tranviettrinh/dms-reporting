@@ -1,4 +1,7 @@
-list_product=[["FNKGCN0011.1","TĐ_NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100 hộp x 1 túi x 3 vỉ x 10 viên)","Nhóm hàng hóa 1_THUỐC DD DÁN TEM","Hộp","96,000"],
+from modules.Product import Product
+
+# from Product import Product
+all_product=[["FNKGCN0011.1","TĐ_NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100 hộp x 1 túi x 3 vỉ x 10 viên)","Nhóm hàng hóa 1_THUỐC DD DÁN TEM","Hộp","96,000"],
                         ["FNKGCN0011","NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100 hộp x 1 túi x 3 vỉ x 10 viên)","Nhóm hàng hóa 1_THUỐC DD","Hộp","96,000"],
                         ["FATACN0012.1","TĐ_THUỐC AN THẦN ABIPHA (Kiện 100 hộp x 3 vỉ x 10 viên) (VTT)","Nhóm hàng hóa 1_THUỐC DD DÁN TEM","Hộp","89,000"],
                         ["FBPAAA0021","BOPHOI ABIPOLIS (Kiện 180 hộp x 1 túi x 6 vỉ x 5 viên)","Nhóm hàng hóa 1_TPCN","Hộp","106,000"],
@@ -109,5 +112,20 @@ list_product=[["FNKGCN0011.1","TĐ_NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100
                         ["FXHAAA0012","XỊT HỌNG ABIPOLIS 15 ML   ( KIỆN 198 HỘP x 1CHAI 15 ML15 )","Nhóm hàng hóa 1_TPCN","Hộp","75,000"],
                         ["FXMAAA0011","Dung Dịch Xịt mũi Abipolis Người Lớn ( Kiện 130 Hộp x1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","29,000"],
                         ["FXNMAA0011","Xịt nhiệt miệng ABIPOLIS (Kiện 84 hộp x 1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","65,000"]]
-for item in list_product:
-    product=Product()
+list_products=[]
+for item in all_product:
+    product=Product(item[0],item[1],item[2],item[3],item[4])
+    list_products.append(product)
+
+
+
+
+
+
+
+
+
+
+
+
+

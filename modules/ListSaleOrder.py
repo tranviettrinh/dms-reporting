@@ -3,8 +3,9 @@ import json
 import pandas as pd
 from modules.Product import Product
 from modules.Order import Order
-from modules.ListProducts import product_category_list 
 
+# from Product import Product
+# from Order import Order
 
 
 # 1️⃣ API Xác thực để lấy Token
@@ -151,7 +152,6 @@ while con:
                     "Ngày đặt hàng": record.get("sale_order_date", ""),
                     "Ngày ghi sổ": record.get("book_date", ""),
                     "Loại hàng hóa": record.get("list_product_category", ""),
-                    "Nhóm sản phẩm": get_category_by_product_code(product_dict.get("product_code", ""),product_category_list),
                     "": product_dict.get("",""),
                     "Mã hàng hoá": product_dict.get("product_code", ""),
                     "Diễn giải": product_dict.get("description", "N/A"),
@@ -179,11 +179,11 @@ while con:
                         # customer_id = record.get("account_code","")
                         product_id=product_dict.get("product_code", ""),
                         warehouse=product_dict.get("stock_name", ""),
-                        unit=product_dict.get("unit", ""),
-                        quantity=product_dict.get("amount", ""),
-                        unit_price=product_dict.get("price", ""),
-                        amount=product_dict.get("to_currency", ""),
-                        total=product_dict.get("total", "")
+                        unit=product_dict.get("unit", ""), # Đơn vị tính
+                        quantity=product_dict.get("amount", ""), # số lượng
+                        unit_price=product_dict.get("price", ""), # Đơn giá
+                        amount=product_dict.get("to_currency", ""), # Thành tiền
+                        total=product_dict.get("total", "") # Tổng
                     )
 
                  # list_orders.append(order)
