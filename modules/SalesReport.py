@@ -72,7 +72,16 @@ class SalesReport:
         # Định dạng lại cột Total Sales để hiển thị không dùng notations khoa học
         df['total_non_zero'] = df['total_non_zero'].apply(lambda x: f"{x:,.0f}")
         return tabulate(df, headers='keys', tablefmt='psql', showindex="always")
-    
+
+        
+    def customer_sales_report(self, customer_id):
+        sales_report = self.sales_by_customer_id(customer_id)
+        df = pd.DataFrame.from_dict(sales_report, orient='index')
+        df.columns = ['total_non_zero', 'quantity_non_zero','quantity_zero','name']
+        # Định dạng lại cột Total Sales để hiển thị không dùng notations khoa học
+        df['total_non_zero'] = df['total_non_zero'].apply(lambda x: f"{x:,.0f}")
+        # return tabulate(df, headers='keys', tablefmt='psql', showindex="always")
+        return df
     def __str__(self):
         report = f"Total Sales Value: {self.total_sales()} VND\n"
         report += "Detailed Sales Report:\n"
