@@ -197,17 +197,17 @@ while con:
         con = False
         print("❌ API trả về lỗi hoặc không đúng điều kiện!")
 
-# 5️⃣ Sau khi vòng lặp kết thúc, ghi toàn bộ dữ liệu vào file Excel
-if filtered_records:
-    df_records = pd.DataFrame(filtered_records)
-    # df_records = df_records[df_records["Tình trạng ghi doanh số"].isin(["Đã ghi"]) & df_records["Mã Khách Hàng"].isin(["1MB5DLSL001"])]
-    df_records_product = pd.DataFrame(filtered_records_product)
-    # df_records_product = df_records_product[df_records_product["Tình trạng ghi doanh số"].isin(["Đã ghi"]) & df_records_product["Mã Khách Hàng"].isin(["1MB5DLSL001"])]
-    excel_filename="Sale_Order_All.xlsx"
-    with pd.ExcelWriter(excel_filename) as writer:    
-        df_records.to_excel(writer, sheet_name='Nhap khau Don hang', index=False)
-        df_records_product.to_excel(writer, sheet_name='Nhap khau Hang hoa', index=False)
-    print(f"✅ Dữ liệu đã được ghi vào {excel_filename} thành công!")
-else:
-    print("⚠️ Không có dữ liệu để ghi vào file Excel.")
+# # 5️⃣ Sau khi vòng lặp kết thúc, ghi toàn bộ dữ liệu vào file Excel
+# if filtered_records:
+#     df_records = pd.DataFrame(filtered_records)
+#     # df_records = df_records[df_records["Tình trạng ghi doanh số"].isin(["Đã ghi"]) & df_records["Mã Khách Hàng"].isin(["1MB5DLSL001"])]
+#     df_records_product = pd.DataFrame(filtered_records_product)
+#     # df_records_product = df_records_product[df_records_product["Tình trạng ghi doanh số"].isin(["Đã ghi"]) & df_records_product["Mã Khách Hàng"].isin(["1MB5DLSL001"])]
+#     excel_filename="Sale_Order_All.xlsx"
+#     with pd.ExcelWriter(excel_filename) as writer:    
+#         df_records.to_excel(writer, sheet_name='Nhap khau Don hang', index=False)
+#         df_records_product.to_excel(writer, sheet_name='Nhap khau Hang hoa', index=False)
+#     print(f"✅ Dữ liệu đã được ghi vào {excel_filename} thành công!")
+# else:
+#     print("⚠️ Không có dữ liệu để ghi vào file Excel.")
 

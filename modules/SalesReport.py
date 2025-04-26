@@ -39,7 +39,7 @@ class SalesReport:
                         }
                     
                     # Kiểm tra total và cộng dồn quantity và total tương ứng
-                    if total > 0:
+                    if total is not None and total != 0:
                         customer_sales[product_id]['total_non_zero'] += total
                         customer_sales[product_id]['quantity_non_zero'] += quantity
                     elif total == 0:
@@ -47,6 +47,11 @@ class SalesReport:
                         customer_sales[product_id]['quantity_zero'] += quantity
 
         return customer_sales
+    def check_customer_id(self, customer_id):
+        # Kiểm tra xem có đơn hàng nào từ khách hàng này không
+        if not any(order.customer_id == customer_id for order in self.orders):
+            return 0 
+        else: return 1
     # def sales_by_customer_id(self, customer_id):
     #     """Tạo báo cáo bán hàng theo mã khách hàng."""
     #     customer_sales = {}
@@ -73,11 +78,13 @@ class SalesReport:
         df['total_non_zero'] = df['total_non_zero'].apply(lambda x: f"{x:,.0f}")
         return tabulate(df, headers='keys', tablefmt='psql', showindex="always")
 
-        
+
     def customer_sales_report(self, customer_id):
         sales_report = self.sales_by_customer_id(customer_id)
         df = pd.DataFrame.from_dict(sales_report, orient='index')
-        df.columns = ['total_non_zero', 'quantity_non_zero','quantity_zero','name']
+        df['product_code'] = df.index
+        df.columns = ['total_non_zero', 'quantity_non_zero','quantity_zero','name','product_code']
+        df = df[['product_code','name','quantity_non_zero','quantity_zero','total_non_zero']]
         # Định dạng lại cột Total Sales để hiển thị không dùng notations khoa học
         df['total_non_zero'] = df['total_non_zero'].apply(lambda x: f"{x:,.0f}")
         # return tabulate(df, headers='keys', tablefmt='psql', showindex="always")
