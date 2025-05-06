@@ -15,12 +15,12 @@ def main():
 
     orders_sale_in = [
         o for o in list_orders
-            if o.payment_due and datetime.strptime(o.payment_due, "%Y-%m-%dT%H:%M:%S.%f%z").month <= 3 and
+            if o.payment_due and datetime.strptime(o.payment_due, "%Y-%m-%dT%H:%M:%S.%f%z").month <= 4 and
                 datetime.strptime(o.payment_due, "%Y-%m-%dT%H:%M:%S.%f%z").year == 2025 and o.status == "Đã ghi"
     ]
     orders_sale_out = [
         o for o in order_objects
-            if o.payment_due and pd.to_datetime(o.payment_due).month <= 3 and
+            if o.payment_due and pd.to_datetime(o.payment_due).month <= 4 and
                 pd.to_datetime(o.payment_due).year == 2025 and o.status == "Đã ghi"
     ]
 

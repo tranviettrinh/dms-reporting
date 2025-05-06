@@ -113,6 +113,11 @@ all_product=[["FNKGCN0011.1","TĐ_NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100 
                         ["FXMAAA0011","Dung Dịch Xịt mũi Abipolis Người Lớn ( Kiện 130 Hộp x1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","29,000"],
                         ["FXNMAA0011","Xịt nhiệt miệng ABIPOLIS (Kiện 84 hộp x 1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","65,000"]]
 list_products=[]
+all_category_products=[["HH1C","Thuốc Tân Dược"],
+                        ["HH1B1","Thuốc Đông Dược"],
+                        ["HH1B2","TĐ_Thuốc Đông Dược"],
+                        ["HH1A","TPCN Nhóm 1"],
+                        ["HH2","TPCN Nhóm 2"]]
 for item in all_product:
     product=Product(item[0],item[1],item[2],item[3],item[4])
     list_products.append(product)
