@@ -111,7 +111,10 @@ all_product=[["FNKGCN0011.1","TĐ_NGÂN KIỀU GIẢI ĐỘC ABIPHA (Kiện 100 
                         ["FVXACN0011.1","TĐ_THUỐC VIÊM XOANG ABIPHA CAP. (Kiện 100 hộp x 1 túi x 3 vỉ x 10 viên)","Nhóm hàng hóa 1_THUỐC DD DÁN TEM","Hộp","86,000"],
                         ["FXHAAA0012","XỊT HỌNG ABIPOLIS 15 ML   ( KIỆN 198 HỘP x 1CHAI 15 ML15 )","Nhóm hàng hóa 1_TPCN","Hộp","75,000"],
                         ["FXMAAA0011","Dung Dịch Xịt mũi Abipolis Người Lớn ( Kiện 130 Hộp x1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","29,000"],
-                        ["FXNMAA0011","Xịt nhiệt miệng ABIPOLIS (Kiện 84 hộp x 1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","65,000"]]
+                        ["FXNMAA0011","Xịt nhiệt miệng ABIPOLIS (Kiện 84 hộp x 1 chai 15ml)","Nhóm hàng hóa 1_TPCN","Hộp","65,000"],
+                        ["FGCQAA0012.1","TÍCH ĐIỂM_GINKGO 150 COQ10 ABIPHA - MẪU 2 (Kiện 80 Hộp 10 vỉ x 10 viên)","MẪU MỚI_Nhóm hàng hóa 1 TPCN","Hộp","75,000"],
+                        ["CKĐH","Chiết khấu đơn hàng","Khuyến mại","",""],
+                        ["A01","ACO NHỰA","Nhóm VPP tại chi nhánh","",""]]
 list_products=[]
 all_category_products=[["HH1C","Thuốc Tân Dược"],
                         ["HH1B1","Thuốc Đông Dược"],
