@@ -1,14 +1,27 @@
+from datetime import datetime
+from dateutil import parser
+
 class Order:
     def __init__(self, order_number, order_date, customer_id, order_value, payment_due, status):
-        self.order_number = order_number  # Số đơn hàng
-        self.order_date = order_date  # Ngày đặt hàng
-        self.customer_id = customer_id  # Khách hàng
-        self.order_value = order_value  # Giá trị đơn hàng
-        self.payment_due = payment_due  # Hạn thanh toán
-        self.status = status  # Tình trạng đơn hàng
-        self.items = []  # Danh sách các mặt hàng trong đơn
+        self.order_number = order_number
+        self.order_date = self.normalize_datetime(order_date)   # chuẩn hoá ngày
+        self.customer_id = customer_id
+        self.order_value = order_value
+        self.payment_due = self.normalize_datetime(payment_due) # chuẩn hoá ngày
+        self.status = status
+        self.items = []
+
+    def normalize_datetime(self, date_input):
+        # Dùng parser để xử lý nhiều định dạng đầu vào
+        try:
+            dt = parser.parse(date_input)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return date_input  # fallback nếu không parse được
+
     def get(self, attr, default=None):
         return getattr(self, attr, default)
+
     def add_item(self, product_id, warehouse, unit, quantity, unit_price, amount, total):
         self.items.append({
             "product_id": product_id,

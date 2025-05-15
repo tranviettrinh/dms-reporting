@@ -1,100 +1,83 @@
 import pandas as pd
 from tabulate import tabulate
 from datetime import datetime, timezone
+from modules.Order import Order
+from dateutil import parser
 
 pd.options.display.float_format = '{:,.2f}'.format
 
 class SalesReport:
     def __init__(self):
-        self.sales_orders = []  # Danh sách các đơn hàng bán hàng
-        self.purchase_orders = []  # Danh sách các đơn hàng nhập hàng
-        self.products = []  # Danh sách sản phẩm
-
-    def add_sales_order(self, order):
+        self.purchase_orders = []   # Danh sách các đơn hàng nhập (Order objects)
+        self.sales_orders = []      # Danh sách các đơn hàng bán (Order objects)
+        self.products = []          # Danh sách sản phẩm (có thể là dict hoặc custom class nếu muốn sau này)
+ 
+    def add_purchase_order(self, order: 'Order'):
+        """Thêm một đơn hàng nhập vào báo cáo."""
+        self.purchase_orders.append(order)
+    def add_sales_order(self, order: 'Order'):
+        """Thêm một đơn hàng bán vào báo cáo."""
         self.sales_orders.append(order)
 
-    def add_purchase_order(self, order):
-        self.purchase_orders.append(order)
-
     def add_products(self, products):
+        """Thêm danh sách sản phẩm (có thể là list dict hoặc list object)."""
         self.products = products
 
-    def check_customer_id(self, customer_id):
-        # Kiểm tra xem có đơn hàng nào từ khách hàng này không
-        if not any(order.customer_id == customer_id for order in self.sales_orders):
-            return 0 
-        else: return 1
-    def customer_sales_report(self, customer_id, start_date, end_date, order_status=None):
-        sales_report = {}
+    def print_sales_summary(self):
+        print("📦 SALES ORDERS SUMMARY")
+        for order in self.sales_orders:
+            print(order)
 
-        for product in self.products:
-            sales_report[product.product_id] = {
-                'product_name': product.name,
-                'initial_stock': 0,
-                'received_promotion': 0,
-                'received_purchase': 0,
-                'sold_promotion': 0,
-                'sold_regular': 0,
-                'final_stock': 0,
-                'order_status': []
-            }
+    def print_purchase_summary(self):
+        print("📥 PURCHASE ORDERS SUMMARY")
+        for order in self.purchase_orders:
+            print(order)
+    def getProductInventoryByCustomer(self, customer_id, product_id, start_day, status):
+        start_date = parser.parse(start_day)
+        purchase_quantity = 0
+        promo_purchase_quantity = 0
+        sold_quantity = 0
+        promo_sold_quantity = 0
 
-        date_range = pd.date_range(start=start_date, end=end_date, freq='M', tz='Asia/Ho_Chi_Minh')
-
-        for date in date_range:
-            month_start = date.replace(day=1)
-            month_end = date
-
-            for order in self.purchase_orders + self.sales_orders:
-                order_date_str = getattr(order, 'date', None) or getattr(order, 'order_date', None) or getattr(order, 'created_date', None)
-                if not order_date_str:
-                    print(f"Order không có thuộc tính ngày: {order}")
-                    continue
-
-                # Chuyển đổi chuỗi ngày thành datetime với timezone
-                if isinstance(order_date_str, str):
-                    try:
-                        order_date = datetime.strptime(order_date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
-                    except ValueError:
-                        print(f"Định dạng ngày không hợp lệ: {order_date_str}")
-                        continue
-                else:
-                    order_date = order_date_str
-
-                # Đảm bảo month_start và month_end có timezone
-                month_start = month_start.tz_convert('Asia/Ho_Chi_Minh')
-                month_end = month_end.tz_convert('Asia/Ho_Chi_Minh')
-
-                if order.customer_id == customer_id and month_start <= order_date <= month_end:
-                    for item in order.items:
-                        product_id = item['product_id']
-                        quantity = item.get('quantity', 0)
+        for order in self.purchase_orders:
+            if order.customer_id != customer_id:
+                continue
+            order_date = parser.parse(order.payment_due)
+            if order_date <= start_date and order.status == status:
+                for item in order.items:
+                    if item['product_id'] == product_id:
+                        print(order.payment_due)
+                        input()
                         total = item.get('total', 0)
-                        if order in self.purchase_orders:
-                            if total == 0:
-                                sales_report[product_id]['received_promotion'] += quantity
-                            else:
-                                sales_report[product_id]['received_purchase'] += quantity
-                        else:
-                            if total == 0:
-                                sales_report[product_id]['sold_promotion'] += quantity
-                            else:
-                                sales_report[product_id]['sold_regular'] += quantity
+                        quantity = item.get('quantity', 0)
 
-            for product_id, data in sales_report.items():
-                if date == date_range[0]:
-                    data['initial_stock'] = 0
-                else:
-                    data['initial_stock'] = data.get('final_stock', 0)
+                        if total is not None and total != 0:
+                            purchase_quantity += quantity
+                        elif total == 0:
+                            promo_purchase_quantity += quantity
 
-                data['final_stock'] = data['initial_stock'] + data['received_promotion'] + data['received_purchase'] - (data['sold_promotion'] + data['sold_regular'])
 
-        df = pd.DataFrame.from_dict(sales_report, orient='index')
-        df.reset_index(inplace=True)
-        df.rename(columns={'index': 'product_code'}, inplace=True)
+        for order in self.sales_orders:
+            if order.customer_id != customer_id:
+                continue
+            if order.payment_due <= start_date and order.status == status:
+                for item in order.items:
+                    if item['product_id'] == product_id:
+                        print(order.payment_due)
+                        input()
+                        total = item.get('total', 0)
+                        quantity = item.get('quantity', 0)
 
-        df['customer_id'] = customer_id
-        df['start_date'] = start_date
-        df['end_date'] = end_date
+                        if total is not None and total != 0:
+                            sold_quantity += quantity
+                        elif total == 0:
+                            promo_sold_quantity += quantity
 
-        return df
+
+        
+        return purchase_quantity, promo_purchase_quantity, sold_quantity, promo_sold_quantity
+
+
+
+
+
