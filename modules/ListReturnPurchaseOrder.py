@@ -11,16 +11,18 @@ from modules.ItemOrder import ItemOrder
 
 
 # Đọc dữ liệu từ file Excel
-file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/purchaseOrderNPP.xlsx'
+file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/returnPurchaseOrderNPP.xlsx'
 orders_df = pd.read_excel(file_path, sheet_name='Danh sách')
 products_df = pd.read_excel(file_path, sheet_name='Bảng hàng hóa')
 
 # Tạo danh sách các đối tượng Order
-list_orders = [Order(row['Số đơn hàng'], row['Ngày đặt hàng'], row['Mã khách hàng'], row['Giá trị đơn hàng'], row['Ngày ghi sổ'], row['Tình trạng ghi doanh số']) for index, row in orders_df.iterrows()]
+list_orders = [Order(row['Số đề nghị'], row['Ngày đề nghị'], row['Mã khách hàng'], row['Tổng tiền'], row['Ngày đề nghị'], row['Tình trạng']) for index, row in orders_df.iterrows()]
 # Tạo danh sách các đối tượng Product
-product_objects = [ItemOrder(row['Số đơn hàng'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['Số lượng'], row['Đơn giá'], row['Thành tiền'], row['Tổng tiền']) for index, row in products_df.iterrows()]
+product_objects = [ItemOrder(row['Số đề nghị'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['Số lượng'], row['Đơn giá'], row['Thành tiền'], row['Tổng tiền']) for index, row in products_df.iterrows()]
 
 for item_order in list_orders:
+    # print(item_order)
+    # input()
     for item_product in product_objects:
         a = item_order.order_number
         b = item_product.order_id
@@ -36,3 +38,6 @@ for item_order in list_orders:
                         total=item_product.get("total", "") # Tổng
                     )
             
+# for item_order in list_orders:
+#     if item_order.customer_id =="1MB5DLSL001" and item_order.order_number=="DNTL0000035":
+#         print(item_order)
