@@ -110,7 +110,7 @@ class SalesReport:
                             sold_quantity += quantity
                         elif total == 0:
                             promo_sold_quantity += quantity
-                    # if product_id =="FEURAA0011":
+                    # if product_id =="FENTAA0021":
                     #     print(order.order_number, product_id, sold_quantity, promo_sold_quantity)
                     #     input()
         for order in self.return_purchase_orders:

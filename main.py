@@ -33,13 +33,13 @@ def main():
     # province=['Thanh Hóa (VN)']
     # Danh sách miền Nam
     province_MN = ['An Giang','Bà Rịa - Vũng Tàu','Bạc Liêu','Bến Tre','Bình Dương','Bình Phước','Bình Thuận','Cà Mau','Đắk Lắk','Đắk Nông','Đồng Nai','Đồng Tháp','Hậu Giang','Khánh Hòa','Kiên Giang','Lâm Đồng','Long An','Ninh Thuận','Sóc Trăng','Tây Ninh','Tiền Giang','Cần Thơ','Trà Vinh','Vĩnh Long']
-    status=["Đã ghi","Đề nghị ghi","Bản nháp"]
+    status=["Đã ghi","Đề nghị ghi"] #,"Bản nháp"
     start_time = "2025-05-01"
     end_time = "2025-05-31"
     with pd.ExcelWriter("Báo cáo tồn kho.xlsx", engine='openpyxl', mode='w') as writer:
         for i in range(0, len(list_customerNPP)):
             # if (list_customerNPP[i]['Tỉnh/Thành phố (Hóa đơn)'] in province_MN) and (list_customerNPP[i]['Mã khách hàng (*)'] not in ["1MB8DLYB002","1MB4DLTN002","3MNĐLTV01","3MNĐLLĐ01","3MNĐLĐN07","3MNĐLĐT02","3MNĐLHG01","3MNĐLAG03","3MNĐLBTHU02","3MNĐLKG02"]):
-            if (list_customerNPP[i]['Tỉnh/Thành phố (Hóa đơn)'] in province_MN) and (list_customerNPP[i]['Mã khách hàng (*)'] in ["3MNĐLKH01"]):
+            if (list_customerNPP[i]['Tỉnh/Thành phố (Hóa đơn)'] in province_MB) and (list_customerNPP[i]['Mã khách hàng (*)'] in ["1MB8DLNA001"]):
                 # Tên sheet
                 sheet_filename = f"Sheet_{i+1}_{list_customerNPP[i]['Tỉnh/Thành phố (Hóa đơn)']}"
                 rows=[]
