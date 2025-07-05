@@ -11,7 +11,7 @@ from modules.ItemOrder import ItemOrder
 
 
 # Đọc dữ liệu từ file Excel
-file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/saleOrderNPP.xlsx'
+file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/CRM_Distributor.xlsx'
 orders_df = pd.read_excel(file_path, sheet_name='Danh sách')
 products_df = pd.read_excel(file_path, sheet_name='Bảng hàng hóa')
 
