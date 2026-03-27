@@ -1,0 +1,1 @@
+file = input("Nhập mã công ty: ").strip()

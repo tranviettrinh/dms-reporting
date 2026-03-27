@@ -2,7 +2,7 @@ import pandas as pd
 from modules.Product import Product
 from modules.Order import Order
 from modules.ItemOrder import ItemOrder
-
+from modules.File import file
 
 # from Product import Product
 # from Order import Order
@@ -11,14 +11,29 @@ from modules.ItemOrder import ItemOrder
 
 
 # Đọc dữ liệu từ file Excel
-file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/CRM_Returndistributor.xlsx'
+file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/'+file+'/CRM_Returndistributor.xlsx'
 orders_df = pd.read_excel(file_path, sheet_name='Danh sách')
 products_df = pd.read_excel(file_path, sheet_name='Bảng hàng hóa')
+# 1) Danh sách cột dùng để tạo Order
+order_cols = ["Số đề nghị", "Ngày đề nghị", "Mã khách hàng", "Tổng tiền", "Ngày đề nghị", "Tình trạng", "Người thực hiện"]
 
+# 2) Check thiếu cột (làm trước khi iterrows)
+missing_cols = [c for c in order_cols if c not in orders_df.columns]
+if missing_cols:
+    raise KeyError(f"Thiếu cột trong sheet 'Danh sách': {missing_cols}")
+
+# 3) (Khuyến nghị) Lọc các row bắt buộc phải có
+required = ["Số đề nghị", "Ngày đề nghị", "Mã khách hàng"]
+valid_mask = orders_df[required].notna().all(axis=1)
+
+# Nếu muốn xem các dòng bị thiếu
+invalid_rows = orders_df.loc[~valid_mask, required]
+print("Số dòng thiếu thông tin bắt buộc ListReturnSaleOrder:", len(invalid_rows))
+input()
 # Tạo danh sách các đối tượng Order
-list_orders = [Order(row['Số đề nghị'], row['Ngày đề nghị'], row['Mã khách hàng'], row['Tổng tiền'], row['Ngày đề nghị'], row['Tình trạng']) for index, row in orders_df.iterrows()]
+list_orders = [Order(row['Số đề nghị'], row['Ngày đề nghị'], row['Mã khách hàng'], row['Tổng tiền'], row['Ngày đề nghị'], row['Tình trạng'], row['Người thực hiện'],"","","","","") for index, row in orders_df.iterrows()]
 # Tạo danh sách các đối tượng Product
-product_objects = [ItemOrder(row['Số đề nghị'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['Số lượng'], row['Đơn giá'], row['Thành tiền'], row['Tổng tiền']) for index, row in products_df.iterrows()]
+product_objects = [ItemOrder(row['Số đề nghị'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['SL theo ĐVTC'], row['Đơn giá sau thuế'], row['Thuế suất'], row['Thành tiền'], row['Tổng tiền'],"") for index, row in products_df.iterrows()]
 
 for item_order in list_orders:
     for item_product in product_objects:
@@ -32,7 +47,9 @@ for item_order in list_orders:
                         unit=item_product.get("unit", ""), # Đơn vị tính
                         quantity=item_product.get("quantity", ""), # số lượng
                         unit_price=item_product.get("unit_price", ""), # Đơn giá
+                        tax= item_product.get("tax",""), # Thuế suất
                         amount=item_product.get("amount", ""), # Thành tiền
-                        total=item_product.get("total", "") # Tổng
+                        total=item_product.get("total", ""), # Tổng
+                        promotion=item_product.get("promotion","") # Chương trình khuyến mại
                     )
             

@@ -2,7 +2,7 @@ import pandas as pd
 from modules.Product import Product
 from modules.Order import Order
 from modules.ItemOrder import ItemOrder
-
+from modules.File import file
 
 # from Product import Product
 # from Order import Order
@@ -11,14 +11,35 @@ from modules.ItemOrder import ItemOrder
 
 
 # Đọc dữ liệu từ file Excel
-file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/file/CRM_Saleorder.xlsx'
+file_path = '/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/'+file+'/CRM_Saleorder.xlsx'
 orders_df = pd.read_excel(file_path, sheet_name='Danh sách')
 products_df = pd.read_excel(file_path, sheet_name='Bảng hàng hóa')
-
+products_df = products_df.dropna(subset=['Đơn vị tính'])
 # Tạo danh sách các đối tượng Order
-list_orders = [Order(row['Số đơn hàng'], row['Ngày đặt hàng'], row['Mã khách hàng'], row['Giá trị đơn hàng'], row['Ngày ghi sổ'], row['Tình trạng ghi doanh số']) for index, row in orders_df.iterrows()]
+list_orders = [Order(row['Số đơn hàng'], row['Ngày đặt hàng'], row['Mã khách hàng'], row['Giá trị đơn hàng'], row['Ngày ghi sổ'], row['Tình trạng ghi doanh số'], row['Người thực hiện'], row['Điện thoại'],row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Giao hàng)'], row['Quận/Huyện (Giao hàng)'], row['Tỉnh/Thành phố (Giao hàng)']) for index, row in orders_df.iterrows()]
+# 1) Danh sách cột dùng để tạo Order
+order_cols = [
+    "Số đơn hàng", "Ngày đặt hàng", "Mã khách hàng", "Giá trị đơn hàng",
+    "Ngày ghi sổ", "Tình trạng ghi doanh số", "Người thực hiện", "Điện thoại",
+    "Số nhà, Đường phố (Giao hàng)", "Phường/Xã (Giao hàng)",
+    "Quận/Huyện (Giao hàng)", "Tỉnh/Thành phố (Giao hàng)"
+]
+
+# 2) Check thiếu cột (làm trước khi iterrows)
+missing_cols = [c for c in order_cols if c not in orders_df.columns]
+if missing_cols:
+    raise KeyError(f"Thiếu cột trong sheet 'Danh sách': {missing_cols}")
+
+# 3) (Khuyến nghị) Lọc các row bắt buộc phải có
+required = ["Số đơn hàng", "Ngày đặt hàng", "Mã khách hàng"]
+valid_mask = orders_df[required].notna().all(axis=1)
+
+# Nếu muốn xem các dòng bị thiếu
+invalid_rows = orders_df.loc[~valid_mask, required]
+print("Số dòng thiếu thông tin bắt buộc ListSaleOrder:", len(invalid_rows))
+input()
 # Tạo danh sách các đối tượng Product
-product_objects = [ItemOrder(row['Số đơn hàng'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['Số lượng'], row['Đơn giá'], row['Thành tiền'], row['Tổng tiền']) for index, row in products_df.iterrows()]
+product_objects = [ItemOrder(row['Số đơn hàng'],row['Mã hàng hóa'], "", row['Đơn vị tính'], row['SL theo ĐVTC'], row['Đơn giá sau thuế'], row['Thuế suất'], row['Thành tiền'], row['Tổng tiền'], row['CTKM']) for index, row in products_df.iterrows()]
 
 for item_order in list_orders:
     for item_product in product_objects:
@@ -32,7 +53,9 @@ for item_order in list_orders:
                         unit=item_product.get("unit", ""), # Đơn vị tính
                         quantity=item_product.get("quantity", ""), # số lượng
                         unit_price=item_product.get("unit_price", ""), # Đơn giá
+                        tax= item_product.get("tax",""), # Thuế suất
                         amount=item_product.get("amount", ""), # Thành tiền
-                        total=item_product.get("total", "") # Tổng
+                        total=item_product.get("total", ""), # Tổng
+                        promotion=item_product.get("promotion","") # Chương trình khuyến mại
                     )
             

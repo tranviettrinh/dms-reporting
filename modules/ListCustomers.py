@@ -1,119 +1,43 @@
-import requests
-import json
 import pandas as pd
+from modules.Customer import Customer
+import re
+from modules.File import file
+# Đọc Excel
+df_customerAll = pd.read_excel('/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/'+file+'/CRM_Account.xlsx', engine='openpyxl', sheet_name='Danh sách')
+df_customerAll = df_customerAll[~df_customerAll['Người tạo'].isin(["Phùng Thị Hà","Nguyễn Thị Mai","Nguyễn Thị Mai Duyên","Trinh Binh"]) & ~df_customerAll['Loại khách hàng'].isin(["1MBKLNB"])]
+df_customerAll.to_excel("t.xlsx",index=False, engine="openpyxl")
+targets = ["1MB_HĐ001", "1MB_HĐ015", "1MB_HĐ002", "1MB_HĐ003","1MB_HĐ005", "1MB_HĐ008","1MB_KL001",
+            "1MB_KGPP_HĐ001", "1MB_KGPP_HĐ015", "1MB_KGPP_HĐ002", "1MB_KGPP_HĐ003","1MB_KGPP_HĐ005", "1MB_KGPP_HĐ008","1MB_KGPP_KL001",
+            "2MT_HĐ001", "2MT_HĐ015", "2MT_HĐ002","2MT_HĐ003","2MT_HĐ005","2MT_KL001",
+            "2MT_KGPP_HĐ001", "2MT_KGPP_HĐ015", "2MT_KGPP_HĐ002","2MT_KGPP_HĐ003","2MT_KGPP_HĐ005","2MT_KGPP_KL001",
+            "3MN_HĐ001", "3MN_HĐ015", "3MN_HĐ002","3MN_HĐ003", "3MN_HĐ005","3MN_KL001",
+            "3MN_KGPP_HĐ001", "3MN_KGPP_HĐ015", "3MN_KGPP_HĐ002","3MN_KGPP_HĐ003", "3MN_KGPP_HĐ005","3MN_KGPP_KL001"]  # chỉnh theo nhu cầu "1MBTINHDL",
+# Tạo regex OR an toàn
+pat = re.compile("|".join(re.escape(t) for t in targets))  # thêm flags=re.IGNORECASE nếu cần
 
-# 1️⃣ API Xác thực để lấy Token
-auth_url = "https://crmconnect.misa.vn/api/v2/Account"
-auth_payload = {
-    "client_id": "tranviettrinh",
-    "client_secret": "KSC34LQX0mmCIx1IwnFW5XKWQaX61jzVkiBMbooTH4c="
-}
-headers = {"Content-Type": "application/json"}
+# Tìm và chỉ ghi đúng tên mã (nhiều mã -> nối bằng "; ")
+df_customerAll['Loại hợp đồng'] = (df_customerAll['Loại khách hàng'].astype(str)
+               .str.findall(pat)
+               .apply(lambda xs: "; ".join(dict.fromkeys(xs))))  # unique, giữ thứ tự
 
-auth_response = requests.post(auth_url, json=auth_payload, headers=headers)
-auth_data = auth_response.json()
+df_customerAll['Loại phân vùng'] = (
+    df_customerAll['Loại khách hàng']
+    .fillna("")
+    .str.replace(pat, "", regex=True)
+    .str.replace(r"[-_]+", " ", regex=True)
+    .str.strip()
+    .replace("", "Chưa xác định")
+)
+# Tạo danh sách các đối tượng Order
+# list_customerNPP = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại khách hàng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Giao hàng)'], row['Quận/Huyện (Giao hàng)'], row['Tỉnh/Thành phố (Giao hàng)'], row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất'], row['Ngày thành lập/Ngày sinh'], row['Là nhà phân phối'], row['Đơn vị']) for index, row in df_customerAll.iterrows()]
+list_customerNPP = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại khách hàng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Giao hàng)'], row['Quận/Huyện (Giao hàng)'], row['Tỉnh/Thành phố (Giao hàng)'], row['Địa chỉ (Giao hàng)'],row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất'], row['Ngày thành lập/Ngày sinh'],row['Là nhà phân phối'], row['Đơn vị']) for index, row in df_customerAll.iterrows()]
+# list_customerNPP = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại khách hàng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Số nhà, Đường phố (Hóa đơn)'],row['Phường/Xã (Hóa đơn)'], row['Quận/Huyện (Hóa đơn)'], row['Tỉnh/Thành phố (Hóa đơn)'], row['Địa chỉ (Hóa đơn)'],row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất'], row['Ngày thành lập/Ngày sinh'],row['Là nhà phân phối'], row['Đơn vị']) for index, row in df_customerAll.iterrows()]
 
-if not auth_data.get("success") or "data" not in auth_data:
-    print("❌ Lỗi xác thực! Kiểm tra client_id và client_secret.")
-    exit()
+# list_customerNPP = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại phân vùng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Hóa đơn)'], row['Quận/Huyện (Hóa đơn)'], row['Tỉnh/Thành phố (Hóa đơn)'], row['Địa chỉ (Hóa đơn)'],row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất'],row['Ngày thành lập/Ngày sinh'], row['Là nhà phân phối'], row['Đơn vị']) for index, row in df_customerAll.iterrows()]
+# list_customerNPP = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại hợp đồng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Hóa đơn)'], row['Quận/Huyện (Hóa đơn)'], row['Tỉnh/Thành phố (Hóa đơn)'], row['Địa chỉ (Hóa đơn)'],row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất'], row['Ngày thành lập/Ngày sinh'], row['Là nhà phân phối'], row['Đơn vị']) for index, row in df_customerAll.iterrows()]
 
-token = auth_data["data"]  # Bearer Token
-pagenum = 1
-con = True
-
-# 2️⃣ Khai báo mảng lưu trữ dữ liệu tạm thời
-list_customerNPP = []
-
-# 3️⃣ Gọi API Lấy danh sách Customers
-while con:
-    customers_url = "https://crmconnect.misa.vn/api/v2/Customers"
-    query_params = {
-        "page": pagenum,
-        "pageSize": 100,
-        "isDescending": True
-    }
-    customers_headers = {
-        "Authorization": f"Bearer {token}",
-        "Clientid": "tranviettrinh",
-        "Content-Type": "application/json"
-    }
-
-    customers_response = requests.get(customers_url, headers=customers_headers, params=query_params)
-    customers_data = customers_response.json()
-
-    # 4️⃣ Kiểm tra điều kiện API có thành công không
-    if customers_data.get("success") is True and customers_data.get("code") == 200:
-        print(f"✅ Trang {pagenum}: API trả về thành công! Đang lưu dữ liệu vào bộ nhớ...")
-
-        # Chuyển dữ liệu JSON thành danh sách các dòng
-        records = customers_data.get("data", [])
-
-        # Nếu có dữ liệu, lọc chỉ các trường cần lấy và đổi tên cột
-        if records:
-            for record in records:
-                if record.get("is_distributor", "N/A") == True:
-                    list_customerNPP.append({
-                        "Mã khách hàng (*)": record.get("account_number", "N/A"),
-                        "Tên khách hàng (*)": record.get("account_name", "N/A"),
-                        # "Tên viết tắt": record.get("", ""),
-                        # "Mã số thuế": record.get("", ""),
-                        # "Điện thoại": record.get("office_tel", "N/A"),
-                        # "Email": record.get("", ""),
-                        # "Nguồn gốc": record.get("", ""),
-                        # "Loại khách hàng": record.get("account_type", "N/A"),
-                        # "Lĩnh vực": record.get("", ""),
-                        # "Loại hình": record.get("", ""),
-                        # "Ngành nghề": record.get("", ""),
-                        # "Quốc gia (Hóa đơn)": record.get("billing_country", "N/A"),
-                        # "Quốc gia (Giao hàng)": record.get("shipping_country", "N/A"),
-                        "Tỉnh/Thành phố (Hóa đơn)": record.get("billing_province", "N/A"),
-                        # "Tỉnh/Thành phố (Giao hàng)": record.get("shipping_province", "N/A"),
-                        # "Quận/Huyện (Hóa đơn)": record.get("billing_district", "N/A"),
-                        # "Quận/Huyện (Giao hàng)": record.get("shipping_district", "N/A"),
-                        # "Phường/Xã (Hóa đơn)": record.get("billing_ward", "N/A"),
-                        # "Phường/Xã (Giao hàng)": record.get("shipping_ward", "N/A"),
-                        # "Số nhà, Đường phố (Hóa đơn)": record.get("billing_street", "N/A"),
-                        # "Số nhà, Đường phố (Giao hàng)": record.get("shipping_street", "N/A"),                    
-                        # "Địa chỉ (Hóa đơn)": record.get("billing_address", "N/A"),
-                        # "Địa chỉ (Giao hàng)": record.get("shipping_address", "N/A"),
-                        # "Mã vùng (Hóa đơn)": record.get("", ""),                    
-                        # "Mã vùng (Giao hàng)": record.get("", ""),                    
-                        # "Tài khoản ngân hàng": record.get("", ""),
-                        # "Mở tại ngân hàng": record.get("", ""),
-                        # "Ngày thành lập/Ngày sinh": record.get("", ""),
-                        # "Là khách hàng từ": record.get("", ""),
-                        # "Doanh thu": record.get("", ""),
-                        # "Quy mô nhân sự": record.get("", ""),
-                        # "Số ngày được nợ": record.get("", ""),
-                        # "Website": record.get("", ""),
-                        # "Hạn mức nợ": record.get("", ""),
-                        # "Mô tả": record.get("", ""),
-                        # "Dùng chung": record.get("", ""),
-                        # "Ngừng theo dõi": record.get("", ""),
-                        # "Là KH cá nhân": record.get("", ""),
-                        # "Đối tác/CTV giới thiệu": record.get("", ""),
-                        # "Là đối tác/cộng tác viên": record.get("", ""),
-                        # "Giới tính": record.get("", ""),
-                        # "Số CMND/CCCD": record.get("", ""),
-                        # "Ngày cấp": record.get("", ""),
-                        # "Nơi cấp": record.get("", ""),
-                        # "Mã ngân sách": record.get("", ""),
-                        # "Fax": record.get("", ""),
-                        # "Đơn vị chủ quản": record.get("", ""),
-                        # "Xếp hạng khách hàng": record.get("", ""),
-                        # "Là nhà phân phối": record.get("is_distributor", "N/A"),
-                        # "Chủ sở hữu": record.get("owner_name", "N/A")
-
-                })
-
-            pagenum += 1
-        else:
-            con = False
-            print("⚠️ Không có dữ liệu trên trang tiếp theo. Dừng lại!")
-
-    else:
-        con = False
-        print("❌ API trả về lỗi hoặc không đúng điều kiện!")
-# for i in range(0,len(list_customerNPP)):
-#     print(list_customerNPP[i]['Mã khách hàng (*)'])
-#     input()
+ 
+# list_customers = [Customer(row['Mã khách hàng'], row['Tên khách hàng'], row['Loại khách hàng'], row['Ngày ký hợp đồng'], row['Điện thoại'], row['Phường/Xã (Hóa đơn)'], row['Quận/Huyện (Hóa đơn)'], row['Tỉnh/Thành phố (Hóa đơn)'], row['Phường/Xã (Giao hàng)'], row['Quận/Huyện (Giao hàng)'], row['Tỉnh/Thành phố (Giao hàng)'], row['Mã số thuế'], row['Chủ sở hữu'], row['Mô tả'], row['Ngày ghé thăm gần nhất']) for index, row in df_customerAll.iterrows()]
+# Công ty Dược Phẩm Thái Nguyên
+# df_contact_thainguyen=pd.read_excel('/Users/trinh/Desktop/Abipha/abipha_dms/api_misa/project/modules/'+file+'/CRM_Contact.xlsx', engine='openpyxl', sheet_name='Danh sách')
+# list_customerNPP = [Customer(row['Mã liên hệ'], row['Tên khách hàng'], row['Phân loại khách hàng'], "01/01/2026", row['ĐT di động'], row['Số nhà, Đường phố (Giao hàng)'],row['Phường/Xã (Giao hàng)'], row['Quận/Huyện (Giao hàng)'], row['Tỉnh/Thành phố (Giao hàng)'], row['Địa chỉ (Giao hàng)'],"4600348798", row['Chủ sở hữu'], "", row['Ngày ghé thăm gần nhất'], row['Ngày sinh'],"", row['Đơn vị']) for index, row in df_contact_thainguyen.iterrows()]
