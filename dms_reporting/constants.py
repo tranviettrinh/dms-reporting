@@ -7,6 +7,10 @@ CONTRACT_CODES = [
     "3MN_KGPP_HĐ001", "3MN_KGPP_HĐ015", "3MN_KGPP_HĐ002", "3MN_KGPP_HĐ003", "3MN_KGPP_HĐ005", "3MN_KGPP_KL001",
 ]
 
-DEFAULT_STATUSES = ["Đã ghi", "Đề nghị ghi", "Đã lập chứng từ", "Đã duyệt"]
+SALES_ORDER_STATUS_OPTIONS = ["Bản nháp", "Đề nghị ghi", "Đã ghi", "Từ chối"]
+RETURN_ORDER_STATUS_OPTIONS = ["Bản nháp", "Đề nghị", "Đã duyệt", "Từ chối", "Đã lập chứng từ"]
+
+DEFAULT_SALES_ORDER_STATUSES = ["Bản nháp", "Đề nghị ghi", "Đã ghi", "Từ chối"]
+DEFAULT_RETURN_ORDER_STATUSES = ["Bản nháp", "Đề nghị", "Đã duyệt", "Từ chối", "Đã lập chứng từ"]
 EXCLUDED_CUSTOMER_CREATORS = ["Phùng Thị Hà", "Nguyễn Thị Mai", "Nguyễn Thị Mai Duyên", "Trinh Binh"]
 EXCLUDED_CUSTOMER_TYPES = ["1MBKLNB"]

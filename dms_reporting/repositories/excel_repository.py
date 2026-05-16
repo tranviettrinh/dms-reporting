@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -15,29 +15,53 @@ class DataValidationError(ValueError):
     pass
 
 
+ProgressCallback = Callable[[str], None]
+
+
 @dataclass(slots=True)
 class ExcelCRMRepository:
     paths: CompanyPaths
+    LOAD_DATASET_STEP_COUNT = 8
 
-    def load_dataset(self) -> DatasetBundle:
+    def load_dataset(self, progress_callback: ProgressCallback | None = None) -> DatasetBundle:
+        self._emit_progress(progress_callback, "Đang đọc danh mục sản phẩm...")
+        products = self.load_products()
+        self._emit_progress(progress_callback, "Đang đọc danh sách khách hàng...")
+        customers = self.load_customers()
+        self._emit_progress(progress_callback, "Đang đọc danh sách nhân viên...")
         employees = self.load_employees()
+        self._emit_progress(progress_callback, "Đang đọc dữ liệu phân tuyến...")
         territory_manager = self.load_territory_manager(employees)
+        shipping_territory_manager = self.load_shipping_territory_manager(employees)
+        self._emit_progress(progress_callback, "Đang đọc đơn hàng bán ra...")
+        purchase_orders = self.load_purchase_orders()
+        self._emit_progress(progress_callback, "Đang đọc đơn hàng nhà phân phối...")
+        sales_orders = self.load_sales_orders()
+        self._emit_progress(progress_callback, "Đang đọc đơn hàng trả lại...")
+        return_purchase_orders = self.load_return_purchase_orders()
+        self._emit_progress(progress_callback, "Đang đọc đơn trả lại nhà phân phối...")
+        return_sales_orders = self.load_return_sales_orders()
         return DatasetBundle(
-            products=self.load_products(),
-            customers=self.load_customers(),
+            products=products,
+            customers=customers,
             orders=OrderBucket(
-                purchase_orders=self.load_purchase_orders(),
-                sales_orders=self.load_sales_orders(),
-                return_purchase_orders=self.load_return_purchase_orders(),
-                return_sales_orders=self.load_return_sales_orders(),
+                purchase_orders=purchase_orders,
+                sales_orders=sales_orders,
+                return_purchase_orders=return_purchase_orders,
+                return_sales_orders=return_sales_orders,
             ),
             employees=employees,
             territory_manager=territory_manager,
+            shipping_territory_manager=shipping_territory_manager,
         )
 
     def load_products(self) -> list[Product]:
-        df = self._read_excel(self.paths.products_file, sheet_name="Danh sách")
         required = ["Mã hàng hóa", "Tên hàng hóa", "Loại hàng hóa", "Đơn vị tính chính", "Đơn giá bán", "Thuế GTGT"]
+        df = self._read_excel(
+            self.paths.products_file,
+            sheet_name="Danh sách",
+            usecols=self._build_usecols(required),
+        )
         self._ensure_columns(df, required, self.paths.products_file)
         return [
             Product(
@@ -53,13 +77,24 @@ class ExcelCRMRepository:
         ]
 
     def load_customers(self) -> list[Customer]:
-        df = self._read_excel(self.paths.customers_file, sheet_name="Danh sách")
         required = [
             "Mã khách hàng", "Tên khách hàng", "Loại khách hàng", "Ngày ký hợp đồng", "Điện thoại",
             "Số nhà, Đường phố (Giao hàng)", "Phường/Xã (Giao hàng)", "Quận/Huyện (Giao hàng)",
             "Tỉnh/Thành phố (Giao hàng)", "Địa chỉ (Giao hàng)", "Mã số thuế", "Chủ sở hữu",
             "Mô tả", "Ngày ghé thăm gần nhất", "Ngày thành lập/Ngày sinh", "Là nhà phân phối", "Đơn vị", "Người tạo",
         ]
+        optional_columns = [
+            "Số nhà, Đường phố (Hóa đơn)",
+            "Phường/Xã (Hóa đơn)",
+            "Quận/Huyện (Hóa đơn)",
+            "Tỉnh/Thành phố (Hóa đơn)",
+            "Địa chỉ (Hóa đơn)",
+        ]
+        df = self._read_excel(
+            self.paths.customers_file,
+            sheet_name="Danh sách",
+            usecols=self._build_usecols(required + optional_columns),
+        )
         self._ensure_columns(df, required, self.paths.customers_file)
         df = df[
             ~df["Người tạo"].isin(EXCLUDED_CUSTOMER_CREATORS)
@@ -98,7 +133,6 @@ class ExcelCRMRepository:
         if not self.paths.employees_file.exists():
             return []
 
-        df = self._read_excel(self.paths.employees_file, sheet_name="Danh sách nhân viên", skiprows=3)
         required = [
             "Mã nhân viên (*)",
             "Họ và tên (*)",
@@ -112,6 +146,12 @@ class ExcelCRMRepository:
             "Email tài khoản",
             "Ngày thử việc",
         ]
+        df = self._read_excel(
+            self.paths.employees_file,
+            sheet_name="Danh sách nhân viên",
+            skiprows=3,
+            usecols=self._build_usecols(required),
+        )
         self._ensure_columns(df, required, self.paths.employees_file)
         region_map = self._load_employee_region_map()
 
@@ -140,22 +180,53 @@ class ExcelCRMRepository:
         return employees
 
     def load_territory_manager(self, employees: list[Employee]) -> TerritoryManager:
+        return self._load_territory_manager_from_sheet(
+            employees,
+            sheet_name="Phân tuyến",
+            area_column="commune",
+            territory_prefix="territory",
+        )
+
+    def load_shipping_territory_manager(self, employees: list[Employee]) -> TerritoryManager:
+        return self._load_territory_manager_from_sheet(
+            self._clone_employees(employees),
+            sheet_name="Phân tuyến Giao hàng",
+            area_column="district",
+            territory_prefix="shipping-territory",
+        )
+
+    def _load_territory_manager_from_sheet(
+        self,
+        employees: list[Employee],
+        *,
+        sheet_name: str,
+        area_column: str,
+        territory_prefix: str,
+    ) -> TerritoryManager:
         if not self.paths.territory_file.exists():
             return TerritoryManager(employees=employees, territories=[])
 
-        territory_df = self._read_excel(self.paths.territory_file, sheet_name="Phân tuyến")
-        required = ["emp_id", "province", "commune"]
+        required = ["emp_id", "province", area_column]
+        try:
+            territory_df = self._read_excel(
+                self.paths.territory_file,
+                sheet_name=sheet_name,
+                usecols=self._build_usecols(required),
+            )
+        except ValueError:
+            return TerritoryManager(employees=employees, territories=[])
+
         self._ensure_columns(territory_df, required, self.paths.territory_file)
 
         territories = [
             Territory(
-                territory_id=f"territory-{index + 1}",
+                territory_id=f"{territory_prefix}-{index + 1}",
                 employee_email=str(row["emp_id"]).strip(),
                 province=str(row["province"]).strip(),
-                commune=str(row["commune"]).strip(),
+                commune=str(row[area_column]).strip(),
             )
             for index, row in territory_df.iterrows()
-            if self._clean_str(row["emp_id"]) and self._clean_str(row["province"]) and self._clean_str(row["commune"])
+            if self._clean_str(row["emp_id"]) and self._clean_str(row["province"]) and self._clean_str(row[area_column])
         ]
         return TerritoryManager(employees=employees, territories=territories)
 
@@ -256,13 +327,8 @@ class ExcelCRMRepository:
         order_column_map: dict[str, str | None],
         item_promotion_column: str | None,
     ) -> list[Order]:
-        order_df = self._read_excel(path, sheet_name=order_sheet)
-        item_df = self._read_excel(path, sheet_name=item_sheet)
-        item_df = item_df.dropna(subset=["Đơn vị tính"]) if "Đơn vị tính" in item_df.columns else item_df
-
         required_order_columns = [column for column in order_column_map.values() if column]
         required_order_columns.extend([order_column_map["number"], order_column_map["order_date"], order_column_map["customer_id"]])
-        self._ensure_columns(order_df, required_order_columns, path)
 
         required_item_columns = ["Mã hàng hóa", "Đơn vị tính", "SL theo ĐVTC", "Đơn giá sau thuế", "Thuế suất", "Thành tiền", "Tổng tiền"]
         if order_column_map["number"] == "Số đơn hàng":
@@ -271,6 +337,12 @@ class ExcelCRMRepository:
             required_item_columns.insert(0, "Số đề nghị")
         if item_promotion_column:
             required_item_columns.append(item_promotion_column)
+
+        order_df = self._read_excel(path, sheet_name=order_sheet, usecols=self._build_usecols(required_order_columns))
+        item_df = self._read_excel(path, sheet_name=item_sheet, usecols=self._build_usecols(required_item_columns))
+        item_df = item_df.dropna(subset=["Đơn vị tính"]) if "Đơn vị tính" in item_df.columns else item_df
+
+        self._ensure_columns(order_df, required_order_columns, path)
         self._ensure_columns(item_df, required_item_columns, path)
 
         order_key = order_column_map["number"]
@@ -321,10 +393,22 @@ class ExcelCRMRepository:
         return list(orders_by_number.values())
 
     @staticmethod
-    def _read_excel(path: Path, *, sheet_name: str, skiprows: int = 0) -> pd.DataFrame:
+    def _read_excel(
+        path: Path,
+        *,
+        sheet_name: str,
+        skiprows: int = 0,
+        usecols: list[str] | Callable[[str], bool] | None = None,
+    ) -> pd.DataFrame:
         if not path.exists():
             raise FileNotFoundError(f"Khong tim thay file du lieu: {path}")
-        return pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl", skiprows=skiprows)
+        return pd.read_excel(
+            path,
+            sheet_name=sheet_name,
+            engine="openpyxl",
+            skiprows=skiprows,
+            usecols=usecols,
+        )
 
     @staticmethod
     def _ensure_columns(df: pd.DataFrame, required_columns: list[str], path: Path) -> None:
@@ -364,11 +448,15 @@ class ExcelCRMRepository:
         if not self.paths.territory_file.exists():
             return {}
         try:
-            df = self._read_excel(self.paths.territory_file, sheet_name="Phân Vùng")
+            required = ["Email cơ quan", "Phân vùng"]
+            df = self._read_excel(
+                self.paths.territory_file,
+                sheet_name="Phân Vùng",
+                usecols=self._build_usecols(required),
+            )
         except ValueError:
             return {}
 
-        required = ["Email cơ quan", "Phân vùng"]
         self._ensure_columns(df, required, self.paths.territory_file)
         region_map: dict[str, str] = {}
         for _, row in df.iterrows():
@@ -377,3 +465,33 @@ class ExcelCRMRepository:
             if email and region:
                 region_map[email] = region
         return region_map
+
+    @staticmethod
+    def _emit_progress(progress_callback: ProgressCallback | None, message: str) -> None:
+        if progress_callback is not None:
+            progress_callback(message)
+
+    @staticmethod
+    def _clone_employees(employees: list[Employee]) -> list[Employee]:
+        return [
+            Employee(
+                employee_id=employee.employee_id,
+                employee_name=employee.employee_name,
+                mobile_phone=employee.mobile_phone,
+                organization_unit=employee.organization_unit,
+                employment_status=employee.employment_status,
+                job_position=employee.job_position,
+                birthday=employee.birthday,
+                personal_email=employee.personal_email,
+                company_email=employee.company_email,
+                account_email=employee.account_email,
+                trial_date=employee.trial_date,
+                region_code=employee.region_code,
+            )
+            for employee in employees
+        ]
+
+    @staticmethod
+    def _build_usecols(columns: list[str]) -> Callable[[str], bool]:
+        allowed = set(columns)
+        return lambda column_name: column_name in allowed

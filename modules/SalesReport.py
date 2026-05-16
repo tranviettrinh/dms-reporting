@@ -2,7 +2,7 @@ import pandas as pd
 from tabulate import tabulate
 from datetime import datetime, timezone
 from modules.Order import Order
-from modules.ListProducts import list_products, list_products_DDTD
+from modules.ListProducts import list_products, list_products_DD, list_products_TD
 from dateutil import parser
 from collections import defaultdict
 from modules.ListCustomers import list_customerNPP
@@ -158,7 +158,8 @@ class SalesReport:
         start_date = parser.parse(start_day)
         end_date = parser.parse(end_day)
 
-        doanhso_dongtanduoc = 0
+        doanhso_dongduoc = 0
+        doanhso_tanduoc = 0
         doanhso_tpcn = 0
         check_orders = []
 
@@ -180,15 +181,21 @@ class SalesReport:
 
                 # order_value_actual = sum(item.get('quantity', 0) * item.get('unit_price', 0) for item in order.items)
                 # ✅ Giá trị từ item * đơn giá sản phẩm
-                order_value_actual_dongtanduoc = 0
+                order_value_actual_dongduoc = 0
                 order_value_actual_tpcn =0
+                order_value_actual_tanduoc =0
                 for item in order.items:
                     product_id = item.get('product_id')
                     if item.get('total') >0:
                         quantity = item.get('quantity', 0)
                         unit_price = product_price_map.get(product_id, 0)
-                        if product_id in list_products_DDTD:
-                            order_value_actual_dongtanduoc += (quantity * unit_price)/1
+                        if product_id in list_products_DD:
+                            order_value_actual_dongduoc += (quantity * unit_price)/1
+                        # Log nếu thiếu giá
+                            if product_id not in product_price_map:
+                                print(f"⚠️ Thiếu đơn giá cho sản phẩm: {product_id}, {order.get('order_number')}")
+                        elif product_id in list_products_TD:
+                            order_value_actual_tanduoc += (quantity * unit_price)/1
                         # Log nếu thiếu giá
                             if product_id not in product_price_map:
                                 print(f"⚠️ Thiếu đơn giá cho sản phẩm: {product_id}, {order.get('order_number')}")
@@ -197,11 +204,12 @@ class SalesReport:
                         # Log nếu thiếu giá
                             if product_id not in product_price_map:
                                 print(f"⚠️ Thiếu đơn giá cho sản phẩm: {product_id}, {order.get('order_number')}")
-                doanhso_dongtanduoc += factor * order_value_actual_dongtanduoc
+                doanhso_dongduoc += factor * order_value_actual_dongduoc
+                doanhso_tanduoc += factor * order_value_actual_tanduoc
                 doanhso_tpcn += factor * order_value_actual_tpcn
 
         # print(f"Doanh số từ chi tiết đơn hàng: {month} là {doanhso_items:,.2f}")
-        return [customer_id, month, doanhso_dongtanduoc, doanhso_tpcn]
+        return [customer_id, month, doanhso_dongduoc, doanhso_tpcn, doanhso_tanduoc]
     # def check_promotion(self, customer_id, start_day, end_day, month, statuses):
     #     checked=[]
     #     start_date = parser.parse(start_day)

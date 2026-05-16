@@ -2,20 +2,67 @@
 
 Refactor theo hướng doi tuong cho luong doc Excel CRM MISA va xuat bao cao doanh so khach hang.
 
+## Chay app desktop tren macOS
+
+Tu source:
+
+```bash
+python main_macos.py
+```
+
+Hoac:
+
+```bash
+python -m dms_reporting.macos_app
+```
+
+App desktop cho phep:
+
+- Truong `Thư mục dữ liệu` mac dinh tro thang toi `modules/abipha`
+- Mo app se vao 1 trang dang nhap rieng, dang nhap xong moi vao man hinh bao cao
+- Dang nhap bang tai khoan noi bo de mo dung cac loai bao cao duoc cap quyen
+- Tai khoan `user` chi nhin thay cac bao cao da duoc phan quyen
+- Nhap `start date` va `end date`
+- Tick chon tung loai bao cao can xuat file
+- Chon rieng trang thai don ban ra va trang thai don tra lai
+- Co nut chon nhanh `Chọn tất cả`, `Chỉ phân tuyến`, `Bỏ chọn`
+- Cau hinh `Nguồn cập nhật` bang file `latest-macos.json` hoac URL HTTPS
+- Kiem tra va cai ban `.app` moi ngay trong giao dien macOS
+- Tab `Cập nhật` co them khu `Phân quyền tài khoản` chi hien voi admin de tao user, doi mat khau va gan quyen theo tung bao cao
+
+Lan dau mo app, he thong tu tao tai khoan mac dinh:
+
+- Username: `admin`
+- Password: `admin123`
+
+Tai khoan `admin` xem duoc tat ca loai bao cao. Sau khi dang nhap, admin co the vao tab `Cập nhật` de tao tai khoan `user` va tick chon tung loai bao cao duoc phep su dung.
+
+Neu dong goi thanh `.app`, sau khi mo tren macOS hay chon lai `Thư mục dữ liệu` tro den thu muc project hien tai chua `modules/`.
+
 ## Chay CLI
 
 ```bash
 python main.py --company abipha --start-date 2026-01-01 --end-date 2026-12-31
 ```
 
-Lenh tren se tao 6 file Excel trong `modules/<company>/report/`:
+Lenh tren se tao 7 file Excel trong `modules/<company>/report/`:
 
 - Bao cao doanh so khach hang tong hop
 - Bao cao doanh so chi tiet theo nhom san pham
+- Bao cao doanh thu san luong san pham theo nhan vien
 - Bao cao khach hang phat sinh doanh so lan dau
 - Bao cao khach hang gan sai dia ban
 - Bao cao nhan vien da nghi con trong file phan tuyen
 - Bao cao khach hang con gan cho nhan vien da nghi viec
+
+File `Bao cao doanh thu san luong san pham theo nhan vien`:
+
+- Moi thang la 1 sheet rieng: `Thang 1`, `Thang 2`, ...
+- Trong tung sheet, du lieu duoc gom theo tung nhan vien va tung san pham
+- Loai bo cac don hang cua khach hang co danh dau `La nha phan phoi` trong danh sach customer
+- Khong tinh dong khuyen mai co `don gia ban = 0`
+- San luong thuan = so luong ban ra - so luong tra lai co `don gia ban > 0`
+- Doanh thu thuan = doanh thu ban ra - doanh thu tra lai cua cac dong co `don gia ban > 0`
 
 File `Bao cao khach hang phat sinh doanh so lan dau` co:
 
@@ -28,33 +75,114 @@ Chi muon xuat rieng report sai dia ban:
 python main.py --company abipha --territory-only
 ```
 
-Lenh `--territory-only` se tao 3 file:
+Lenh `--territory-only` se tao 6 file:
 
+- Bao cao khach hang gan dung dia ban
+- Bao cao khach hang gan sai dia ban
+- Bao cao nhan vien da nghi con trong file phan tuyen
+- Bao cao khach hang con gan cho nhan vien da nghi viec
+- Bao cao khach hang gan dung dia ban Giao hang
+- Bao cao khach hang sai dia ban Giao hang
+
+Chon tung loai bao cao can xuat:
+
+```bash
+python main.py --company abipha --reports summary detail invoice-territory --start-date 2026-01-01 --end-date 2026-12-31
+```
+
+Gia tri hop le cho `--reports`:
+
+- `summary`
+- `detail`
+- `employee-product`
+- `first-sales`
+- `invoice-territory`
+- `correct-shipping-territory`
+- `shipping-territory`
+
+Gia tri `invoice-territory` se xuat 4 file:
+
+- Bao cao khach hang gan dung dia ban
 - Bao cao khach hang gan sai dia ban
 - Bao cao nhan vien da nghi con trong file phan tuyen
 - Bao cao khach hang con gan cho nhan vien da nghi viec
 
-## Build Windows
+Chon trang thai don ban ra va don tra lai:
 
-Project da duoc chuan bi san de build `.exe` Windows voi ten phat hanh dep hon va co icon rieng.
-
-Build local tren Windows:
-
-```powershell
-cd path\\to\\project
-build_windows.bat
+```bash
+python main.py \
+  --company abipha \
+  --reports summary detail employee-product \
+  --start-date 2026-01-01 \
+  --end-date 2026-12-31 \
+  --sales-order-statuses "Bản nháp" "Đề nghị ghi" "Đã ghi" "Từ chối" \
+  --return-order-statuses "Bản nháp" "Đề nghị" "Đã duyệt" "Từ chối" "Đã lập chứng từ"
 ```
 
-Build tu GitHub Actions:
+Mac dinh:
 
-- workflow: `.github/workflows/build-windows-exe.yml`
-- artifact: `Abipha-DMS-Reporter-windows-x64`
+- Don ban ra: `Bản nháp`, `Đề nghị ghi`, `Đã ghi`, `Từ chối`
+- Don tra lai: `Bản nháp`, `Đề nghị`, `Đã duyệt`, `Từ chối`, `Đã lập chứng từ`
 
-Sau khi build xong:
+Ghi chu:
 
-- file chay nam tai `dist\\windows-package\\Abipha-DMS-Reporter.exe`
-- file zip phat hanh nam tai `dist\\Abipha-DMS-Reporter-windows-x64.zip`
-- script se copy ca thu muc `modules\\` vao cung goi phat hanh
+- Neu file nguon co du lieu go nham `Bản pháp`, he thong se tu dong tinh chung vao nhom `Bản nháp`
+
+## Build app `.app` cho macOS
+
+```bash
+./scripts/build_macos_app.sh
+```
+
+Script se:
+
+- Cai `pyinstaller` neu chua co
+- Build trong thu muc tam `/private/tmp` de tranh metadata cua File Provider
+- Xuat ban `.app` sach mac dinh tai `~/Applications/DMS Reporting.app`
+- Strip `xattr` va ky ad-hoc lai bundle sau khi copy ra vi tri cuoi
+- Dong goi giao dien desktop, khong mo cua so terminal khi chay
+
+Co the doi noi xuat bang bien moi truong:
+
+```bash
+OUTPUT_DIR="$HOME/Applications/Abipha Builds" ./scripts/build_macos_app.sh
+```
+
+Du lieu Excel van nam o thu muc project ben ngoai app. Sau khi mo app, chi can chon thu muc goc chua `modules/`.
+
+## Dong goi goi cap nhat cho app macOS
+
+Sau khi build xong app moi, co the tao goi cap nhat `.zip` va manifest `latest-macos.json`:
+
+```bash
+./scripts/build_macos_update_artifacts.sh
+```
+
+Script mac dinh:
+
+- Lay app tu `~/Applications/DMS Reporting.app`
+- Tao file zip tai `releases/macos/DMS Reporting-<version>-macos.zip`
+- Tao manifest tai `releases/macos/latest-macos.json`
+- Dat `download_url` trong manifest theo duong dan tuong doi canh file manifest, nen co the dat ca 2 file tren o cung mot thu muc chia se noi bo
+
+Neu muon manifest tro thang toi URL public:
+
+```bash
+DOWNLOAD_URL="https://example.com/DMS%20Reporting-0.2.0-macos.zip" ./scripts/build_macos_update_artifacts.sh
+```
+
+Neu muon them ghi chu phat hanh:
+
+```bash
+NOTES_FILE=release-notes.txt ./scripts/build_macos_update_artifacts.sh
+```
+
+Trong app, truong `Nguồn cập nhật` chap nhan:
+
+- Duong dan local toi `latest-macos.json`
+- URL HTTPS toi file manifest
+
+Khi app dang chay tu `DMS Reporting.app`, nut `Cài bản mới` se tai goi `.zip`, giai nen va cai de bundle cu. Sau khi app dong, mo lai `DMS Reporting.app` de vao ban moi.
 
 ## Bien moi truong cho API CRM
 

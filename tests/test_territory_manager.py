@@ -10,6 +10,7 @@ def build_customer(
     *,
     shipping_province: str = "Bắc Ninh",
     shipping_ward: str = "Phường Suối Hoa",
+    shipping_district: str | None = "Gia Bình",
 ) -> Customer:
     return Customer(
         account_number="C001",
@@ -31,7 +32,7 @@ def build_customer(
         unit="Kinh doanh OTC Miền Bắc khu vực 3",
         shipping_street="12 Nguyễn Trãi",
         shipping_ward=shipping_ward,
-        shipping_district="Hải Dương",
+        shipping_district=shipping_district,
         shipping_province=shipping_province,
         shipping_address=f"12 Nguyễn Trãi, {shipping_ward}, {shipping_province}",
     )
@@ -180,3 +181,61 @@ def test_territory_manager_lists_inactive_employees_still_present_in_territory_f
     assert len(inactive_entries) == 1
     assert inactive_entries[0]["employee"].employee_id == "ABN-2024-99"
     assert len(inactive_entries[0]["territories"]) == 1
+
+
+def test_territory_manager_recognizes_correct_shipping_assignment_for_active_employee():
+    employee = Employee(
+        employee_id="ABN-2025-18",
+        employee_name="Nguyễn Hữu Nam",
+        employment_status="Đang làm việc",
+        company_email="HAIDUONG01@com.vn",
+    )
+    territory = Territory(
+        territory_id="territory-1",
+        employee_email="HAIDUONG01@com.vn",
+        province="Bắc Ninh",
+        commune="Gia Bình",
+    )
+    manager = TerritoryManager(employees=[employee], territories=[territory])
+    customer = build_customer(
+        "Nguyễn Hữu Nam - Hải Dương 1 (ABN-2025-18)",
+        "Hải Dương",
+        "Xã Thanh Xuân",
+        shipping_province="Bắc Ninh",
+        shipping_ward="Phường Suối Hoa",
+        shipping_district="Gia Bình",
+    )
+
+    evaluation = manager.evaluate_customer_shipping_assignment(customer)
+
+    assert evaluation["is_correct"] is True
+    assert evaluation["employee"] == employee
+
+
+def test_territory_manager_requires_shipping_district_for_shipping_assignment():
+    employee = Employee(
+        employee_id="ABN-2025-18",
+        employee_name="Nguyễn Hữu Nam",
+        employment_status="Đang làm việc",
+        company_email="HAIDUONG01@com.vn",
+    )
+    territory = Territory(
+        territory_id="territory-1",
+        employee_email="HAIDUONG01@com.vn",
+        province="Bắc Ninh",
+        commune="Gia Bình",
+    )
+    manager = TerritoryManager(employees=[employee], territories=[territory])
+    customer = build_customer(
+        "Nguyễn Hữu Nam - Hải Dương 1 (ABN-2025-18)",
+        "Hải Dương",
+        "Xã Thanh Xuân",
+        shipping_province="Bắc Ninh",
+        shipping_ward="Phường Suối Hoa",
+        shipping_district=None,
+    )
+
+    evaluation = manager.evaluate_customer_shipping_assignment(customer)
+
+    assert evaluation["is_correct"] is False
+    assert evaluation["reason"] == "Thiếu dữ liệu địa bàn giao hàng của khách hàng"

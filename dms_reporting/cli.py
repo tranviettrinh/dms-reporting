@@ -2,17 +2,9 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import sys
 
-from dms_reporting.config import CompanyPaths, ReportSettings
-from dms_reporting.repositories.excel_repository import ExcelCRMRepository
-from dms_reporting.services.sales_report_service import SalesReportService
-
-
-def _default_base_dir() -> Path:
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent.parent
+from dms_reporting.constants import DEFAULT_RETURN_ORDER_STATUSES, DEFAULT_SALES_ORDER_STATUSES
+from dms_reporting.reporting import ALL_REPORT_IDS, ReportRequest, generate_reports
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,15 +14,41 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--end-date", help="Report end date, format YYYY-MM-DD")
     parser.add_argument(
         "--base-dir",
-        default=str(_default_base_dir()),
+        default=str(Path(__file__).resolve().parent.parent),
         help="Project base directory containing modules/",
     )
     parser.add_argument("--output", help="Optional explicit output Excel path")
     parser.add_argument("--detail-output", help="Optional explicit output Excel path for product-group detail report")
+    parser.add_argument("--employee-product-output", help="Optional explicit output Excel path for employee-product sales report")
     parser.add_argument("--first-sales-output", help="Optional explicit output Excel path for first-sales customers report")
+    parser.add_argument("--correct-territory-output", help="Optional explicit output Excel path for correct territory assignments report")
     parser.add_argument("--territory-output", help="Optional explicit output Excel path for wrong territory assignments report")
     parser.add_argument("--inactive-territory-output", help="Optional explicit output Excel path for inactive employees still appearing in territory assignments")
     parser.add_argument("--inactive-customer-output", help="Optional explicit output Excel path for customers still assigned to inactive employees")
+    parser.add_argument("--combined-territory-output", help="Optional explicit output Excel path for combined invoice and shipping territory report")
+    parser.add_argument("--correct-shipping-territory-output", help="Optional explicit output Excel path for correct shipping territory assignments report")
+    parser.add_argument("--shipping-territory-output", help="Optional explicit output Excel path for wrong shipping territory assignments report")
+    parser.add_argument(
+        "--sales-order-statuses",
+        nargs="+",
+        metavar="STATUS",
+        help=f"Trạng thái đơn bán ra. Mặc định: {', '.join(DEFAULT_SALES_ORDER_STATUSES)}",
+    )
+    parser.add_argument(
+        "--return-order-statuses",
+        nargs="+",
+        metavar="STATUS",
+        help=f"Trạng thái đơn trả lại. Mặc định: {', '.join(DEFAULT_RETURN_ORDER_STATUSES)}",
+    )
+    parser.add_argument(
+        "--reports",
+        nargs="+",
+        metavar="REPORT",
+        help=(
+            "Danh sách report cần xuất. "
+            f"Ví dụ: --reports summary detail invoice-territory. Giá trị hợp lệ: {', '.join(ALL_REPORT_IDS)}"
+        ),
+    )
     parser.add_argument("--territory-only", action="store_true", help="Only generate territory-related reports")
     return parser
 
@@ -39,74 +57,38 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if not args.territory_only and (not args.start_date or not args.end_date):
-        parser.error("--start-date and --end-date are required unless --territory-only is used")
+    if args.territory_only and args.reports:
+        parser.error("Không thể dùng đồng thời --territory-only và --reports")
 
-    company_paths = CompanyPaths(base_dir=Path(args.base_dir).resolve(), company_code=args.company)
+    try:
+        result = generate_reports(
+            ReportRequest(
+                company=args.company,
+                start_date=args.start_date,
+                end_date=args.end_date,
+                base_dir=Path(args.base_dir),
+                sales_order_statuses=tuple(args.sales_order_statuses) if args.sales_order_statuses else None,
+                return_order_statuses=tuple(args.return_order_statuses) if args.return_order_statuses else None,
+                output=Path(args.output) if args.output else None,
+                detail_output=Path(args.detail_output) if args.detail_output else None,
+                employee_product_output=Path(args.employee_product_output) if args.employee_product_output else None,
+                first_sales_output=Path(args.first_sales_output) if args.first_sales_output else None,
+                correct_territory_output=Path(args.correct_territory_output) if args.correct_territory_output else None,
+                territory_output=Path(args.territory_output) if args.territory_output else None,
+                inactive_territory_output=Path(args.inactive_territory_output) if args.inactive_territory_output else None,
+                inactive_customer_output=Path(args.inactive_customer_output) if args.inactive_customer_output else None,
+                combined_territory_output=Path(args.combined_territory_output) if args.combined_territory_output else None,
+                correct_shipping_territory_output=Path(args.correct_shipping_territory_output) if args.correct_shipping_territory_output else None,
+                shipping_territory_output=Path(args.shipping_territory_output) if args.shipping_territory_output else None,
+                selected_reports=tuple(args.reports) if args.reports else None,
+                territory_only=args.territory_only,
+            )
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
 
-    repository = ExcelCRMRepository(company_paths)
-    dataset = repository.load_dataset()
-    service = SalesReportService(dataset)
-    report_dir = company_paths.ensure_report_dir()
-
-    territory_report_df = service.build_wrong_territory_assignments_report()
-    inactive_territory_report_df = service.build_inactive_employee_territories_report()
-    inactive_customer_report_df = service.build_customers_assigned_to_inactive_employees_report()
-    territory_output_path = (
-        Path(args.territory_output).resolve()
-        if args.territory_output
-        else report_dir / f"Báo cáo khách hàng sai địa bàn {args.company}.xlsx"
-    )
-    inactive_territory_output_path = (
-        Path(args.inactive_territory_output).resolve()
-        if args.inactive_territory_output
-        else report_dir / f"Báo cáo nhân viên đã nghỉ còn trong phân tuyến {args.company}.xlsx"
-    )
-    inactive_customer_output_path = (
-        Path(args.inactive_customer_output).resolve()
-        if args.inactive_customer_output
-        else report_dir / f"Báo cáo khách hàng còn gán cho nhân viên đã nghỉ việc {args.company}.xlsx"
-    )
-    service.write_flat_report(territory_report_df, territory_output_path, sheet_name="Sai địa bàn")
-    service.write_flat_report(
-        inactive_territory_report_df,
-        inactive_territory_output_path,
-        sheet_name="Nhân viên đã nghỉ",
-    )
-    service.write_flat_report(
-        inactive_customer_report_df,
-        inactive_customer_output_path,
-        sheet_name="Khách hàng gán NV nghỉ",
-    )
-    print(f"Generated territory report: {territory_output_path}")
-    print(f"Generated inactive territory report: {inactive_territory_output_path}")
-    print(f"Generated inactive customer report: {inactive_customer_output_path}")
-
-    if args.territory_only:
-        return 0
-
-    settings = ReportSettings(start_date=args.start_date, end_date=args.end_date)
-    report_df = service.build_customer_sales_report(settings)
-    detail_report_df = service.build_customer_sales_detail_report(settings)
-    first_sales_reports = service.build_first_sales_customers_monthly_reports(settings)
-
-    output_path = Path(args.output).resolve() if args.output else report_dir / f"Báo cáo doanh số khách hàng {args.company}.xlsx"
-    detail_output_path = (
-        Path(args.detail_output).resolve()
-        if args.detail_output
-        else report_dir / f"Báo cáo doanh số nhóm sản phẩm {args.company}.xlsx"
-    )
-    first_sales_output_path = (
-        Path(args.first_sales_output).resolve()
-        if args.first_sales_output
-        else report_dir / f"Báo cáo khách hàng phát sinh doanh số lần đầu {args.company}.xlsx"
-    )
-    service.write_customer_sales_report(report_df, output_path)
-    service.write_customer_sales_report(detail_report_df, detail_output_path)
-    service.write_multi_sheet_report(first_sales_reports, first_sales_output_path)
-    print(f"Generated report: {output_path}")
-    print(f"Generated detail report: {detail_output_path}")
-    print(f"Generated first sales report: {first_sales_output_path}")
+    for report in result.generated_reports:
+        print(f"Generated {report.label}: {report.path}")
     return 0
 
 

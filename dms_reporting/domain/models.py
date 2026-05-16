@@ -62,6 +62,13 @@ class Customer:
         return match.group(1).strip() if match else None
 
     @property
+    def is_distributor_customer(self) -> bool:
+        if not self.is_distributor:
+            return False
+        normalized = self.is_distributor.strip().lower()
+        return normalized not in {"0", "false", "no", "không", "khong", "none", "nan"}
+
+    @property
     def shipping_street_value(self) -> str | None:
         return self.shipping_street or self.billing_street
 
@@ -187,6 +194,32 @@ class TerritoryManager:
         return self.find_employee(employee_id=customer.owner_employee_id)
 
     def evaluate_customer_assignment(self, customer: Customer) -> dict[str, object]:
+        return self._evaluate_assignment(
+            customer=customer,
+            province=customer.billing_province,
+            area=customer.billing_ward,
+            missing_reason="Thiếu dữ liệu địa bàn hóa đơn của khách hàng",
+            mismatch_reason="Địa bàn khách hàng không thuộc phân tuyến của nhân viên",
+        )
+
+    def evaluate_customer_shipping_assignment(self, customer: Customer) -> dict[str, object]:
+        return self._evaluate_assignment(
+            customer=customer,
+            province=customer.shipping_province,
+            area=customer.shipping_district,
+            missing_reason="Thiếu dữ liệu địa bàn giao hàng của khách hàng",
+            mismatch_reason="Địa bàn giao hàng của khách hàng không thuộc phân tuyến của nhân viên",
+        )
+
+    def _evaluate_assignment(
+        self,
+        *,
+        customer: Customer,
+        province: str | None,
+        area: str | None,
+        missing_reason: str,
+        mismatch_reason: str,
+    ) -> dict[str, object]:
         employee_id = customer.owner_employee_id
         if not employee_id:
             return {"is_correct": False, "reason": "Không tách được mã nhân viên từ chủ sở hữu", "employee": None}
@@ -196,16 +229,16 @@ class TerritoryManager:
             return {"is_correct": False, "reason": "Không tìm thấy nhân viên", "employee": None}
         if not employee.is_active():
             return {"is_correct": False, "reason": "Nhân viên không hoạt động", "employee": employee}
-        if not customer.billing_province or not customer.billing_ward:
-            return {"is_correct": False, "reason": "Thiếu dữ liệu địa bàn hóa đơn của khách hàng", "employee": employee}
+        if not province or not area:
+            return {"is_correct": False, "reason": missing_reason, "employee": employee}
 
         is_match = any(
-            territory.matches(customer.billing_province, customer.billing_ward)
+            territory.matches(province, area)
             for territory in employee.territories
         )
         if is_match:
             return {"is_correct": True, "reason": "", "employee": employee}
-        return {"is_correct": False, "reason": "Địa bàn khách hàng không thuộc phân tuyến của nhân viên", "employee": employee}
+        return {"is_correct": False, "reason": mismatch_reason, "employee": employee}
 
     def is_customer_correctly_assigned(self, customer: Customer) -> bool:
         return bool(self.evaluate_customer_assignment(customer)["is_correct"])
@@ -300,3 +333,4 @@ class DatasetBundle:
     orders: OrderBucket
     employees: list[Employee] = field(default_factory=list)
     territory_manager: TerritoryManager | None = None
+    shipping_territory_manager: TerritoryManager | None = None
