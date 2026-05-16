@@ -19,12 +19,16 @@ dms-reporting = "dms_reporting.cli:main"
 
 [project.gui-scripts]
 dms-reporting-macos = "dms_reporting.macos_app:launch"
+dms-reporting-desktop = "dms_reporting.macos_app:launch"
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0"
 ]
 macos = [
+  "pyinstaller>=6.0"
+]
+windows = [
   "pyinstaller>=6.0"
 ]
 

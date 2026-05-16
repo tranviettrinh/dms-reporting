@@ -5,7 +5,14 @@ import pytest
 
 import dms_reporting.macos_app as macos_app
 from dms_reporting.config import COMPANY_FILE_SPECS
-from dms_reporting.macos_app import DEFAULT_COMPANY_CODE, MacOSReportApp, is_company_data_dir, resolve_company_context
+from dms_reporting.macos_app import (
+    DEFAULT_COMPANY_CODE,
+    UPDATE_ONLY_MACOS_MESSAGE,
+    MacOSReportApp,
+    is_company_data_dir,
+    resolve_company_context,
+    resolve_default_company_dir,
+)
 from dms_reporting.reporting import GeneratedReport, ReportGenerationResult
 from dms_reporting.user_access import UserStore
 
@@ -59,6 +66,16 @@ def test_is_company_data_dir_requires_expected_files(tmp_path):
     assert not is_company_data_dir(company_dir)
 
 
+def test_resolve_default_company_dir_prefers_runtime_root_modules(tmp_path, monkeypatch):
+    company_dir = create_company_dir(tmp_path)
+    other_dir = tmp_path / "elsewhere"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+    monkeypatch.setattr(macos_app, "get_runtime_root", lambda: tmp_path)
+
+    assert resolve_default_company_dir() == company_dir
+
+
 def test_macos_app_organizes_report_and_update_sections_into_tabs(tmp_path):
     user_store = UserStore(tmp_path / "users.json")
     try:
@@ -71,6 +88,25 @@ def test_macos_app_organizes_report_and_update_sections_into_tabs(tmp_path):
         assert app.current_view == "login"
         tab_texts = [app.notebook.tab(tab_id, "text") for tab_id in app.notebook.tabs()]
         assert tab_texts == ["Báo cáo", "Cập nhật"]
+    finally:
+        app.destroy()
+
+
+def test_macos_app_disables_embedded_updates_on_windows(tmp_path, monkeypatch):
+    user_store = UserStore(tmp_path / "users.json")
+    monkeypatch.setattr(macos_app.sys, "platform", "win32")
+
+    try:
+        app = MacOSReportApp(user_store=user_store)
+    except tk.TclError as exc:
+        pytest.skip(f"Tk không khả dụng trong môi trường test: {exc}")
+
+    try:
+        app.withdraw()
+        assert app.update_status_var.get() == UPDATE_ONLY_MACOS_MESSAGE
+        assert str(app.save_update_button.cget("state")) == "disabled"
+        assert str(app.check_update_button.cget("state")) == "disabled"
+        assert str(app.install_update_button.cget("state")) == "disabled"
     finally:
         app.destroy()
 

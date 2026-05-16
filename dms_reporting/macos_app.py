@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import queue
 import subprocess
 import sys
@@ -9,7 +10,7 @@ from datetime import date
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from dms_reporting.app_info import get_app_version
+from dms_reporting.app_info import get_app_version, get_runtime_root
 from dms_reporting.config import CORE_COMPANY_FILE_KEYS, CompanyPaths, missing_company_files
 from dms_reporting.constants import (
     DEFAULT_RETURN_ORDER_STATUSES,
@@ -40,11 +41,13 @@ from dms_reporting.updater import (
 from dms_reporting.user_access import DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_USERNAME, UserAccount, UserStore
 
 DEFAULT_COMPANY_CODE = "abipha"
+UPDATE_ONLY_MACOS_MESSAGE = "Tự cập nhật trong app hiện chỉ hỗ trợ bản macOS."
 
 
 def resolve_default_company_dir(default_company_code: str = DEFAULT_COMPANY_CODE) -> Path:
+    runtime_root = get_runtime_root()
     package_root = Path(__file__).resolve().parent.parent
-    candidates = [Path.cwd(), package_root, Path.home() / "Documents", Path.home()]
+    candidates = [Path.cwd(), runtime_root, package_root, Path.home() / "Documents", Path.home()]
 
     for candidate in candidates:
         company_dir = candidate / "modules" / default_company_code
@@ -80,6 +83,10 @@ def resolve_company_context(selected_path: Path) -> tuple[Path, str]:
     raise ValueError("Cần chọn thư mục dữ liệu công ty, ví dụ: .../modules/abipha")
 
 
+def supports_embedded_updates() -> bool:
+    return sys.platform == "darwin"
+
+
 class MacOSReportApp(tk.Tk):
     def __init__(self, user_store: UserStore | None = None) -> None:
         super().__init__()
@@ -103,7 +110,9 @@ class MacOSReportApp(tk.Tk):
         self.progress_value_var = tk.DoubleVar(value=0.0)
         self.version_var = tk.StringVar(value=f"Phiên bản hiện tại: {get_app_version()}")
         self.update_source_var = tk.StringVar(value=resolve_update_source())
-        self.update_status_var = tk.StringVar(value="Chưa kiểm tra cập nhật.")
+        self.update_status_var = tk.StringVar(
+            value="Chưa kiểm tra cập nhật." if supports_embedded_updates() else UPDATE_ONLY_MACOS_MESSAGE
+        )
         self.login_status_var = tk.StringVar(value="Đăng nhập để tiếp tục vào phần mềm.")
         self.current_user_var = tk.StringVar(value="Chưa đăng nhập.")
         self.user_status_var = tk.StringVar(value="Đăng nhập để dùng các loại báo cáo được cấp quyền.")
@@ -458,7 +467,7 @@ class MacOSReportApp(tk.Tk):
 
     def _build_update_tab(self, parent: ttk.Frame) -> None:
         parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(1, weight=1)
+        parent.rowconfigure(2, weight=1)
 
         update_frame = ttk.LabelFrame(parent, text="Cập nhật phần mềm", padding=12)
         update_frame.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -506,9 +515,23 @@ class MacOSReportApp(tk.Tk):
             sticky="ew",
             pady=(10, 0),
         )
+        if not supports_embedded_updates():
+            ttk.Label(
+                update_frame,
+                text="Bản Windows vẫn chạy báo cáo bình thường. Phần tự cập nhật trong app chỉ có trên macOS.",
+                anchor="w",
+                justify="left",
+                wraplength=700,
+            ).grid(
+                row=3,
+                column=0,
+                columnspan=4,
+                sticky="ew",
+                pady=(10, 0),
+            )
 
         self.management_frame = ttk.LabelFrame(parent, text="Phân quyền tài khoản", padding=12)
-        self.management_frame.grid(row=1, column=0, sticky="nsew")
+        self.management_frame.grid(row=2, column=0, sticky="nsew")
         self.management_frame.columnconfigure(1, weight=1)
         self.management_frame.rowconfigure(0, weight=1)
 
@@ -885,6 +908,10 @@ class MacOSReportApp(tk.Tk):
         messagebox.showerror("Lỗi", error_message, parent=self)
 
     def _save_update_source(self) -> bool:
+        if not supports_embedded_updates():
+            messagebox.showinfo("Cập nhật phần mềm", UPDATE_ONLY_MACOS_MESSAGE, parent=self)
+            return False
+
         source = self.update_source_var.get().strip()
         try:
             save_update_source(source)
@@ -903,6 +930,10 @@ class MacOSReportApp(tk.Tk):
         return True
 
     def _start_update_check(self) -> None:
+        if not supports_embedded_updates():
+            messagebox.showinfo("Cập nhật phần mềm", UPDATE_ONLY_MACOS_MESSAGE, parent=self)
+            return
+
         source = self.update_source_var.get().strip()
         if source and not self._save_update_source():
             return
@@ -1204,10 +1235,11 @@ class MacOSReportApp(tk.Tk):
         self.login_username_entry.configure(state="disabled" if self._busy else "normal")
         self.login_password_entry.configure(state="disabled" if self._busy else "normal")
         self.logout_button.configure(state="disabled" if self._busy or not has_authenticated_user else "normal")
-        self.save_update_button.configure(state="disabled" if self._busy else "normal")
-        self.check_update_button.configure(state="disabled" if self._busy else "normal")
+        update_controls_enabled = supports_embedded_updates() and not self._busy
+        self.save_update_button.configure(state="normal" if update_controls_enabled else "disabled")
+        self.check_update_button.configure(state="normal" if update_controls_enabled else "disabled")
         self.install_update_button.configure(
-            state="disabled" if self._busy or self.current_update is None else "normal"
+            state="normal" if update_controls_enabled and self.current_update is not None else "disabled"
         )
         self.open_button.configure(state="disabled" if self._busy or report_dir is None else "normal")
         self.new_user_button.configure(state="normal" if admin_session and not self._busy else "disabled")
@@ -1261,6 +1293,14 @@ class MacOSReportApp(tk.Tk):
 
         if sys.platform == "darwin":
             subprocess.run(["open", str(report_dir)], check=False)
+            return
+        if sys.platform == "win32":
+            startfile = getattr(os, "startfile", None)
+            if startfile is not None:
+                startfile(str(report_dir))
+                return
+        if sys.platform.startswith("linux"):
+            subprocess.run(["xdg-open", str(report_dir)], check=False)
             return
 
         messagebox.showinfo("Đường dẫn kết quả", str(report_dir), parent=self)

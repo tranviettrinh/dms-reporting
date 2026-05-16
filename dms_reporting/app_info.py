@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import plistlib
 import sys
 from pathlib import Path
@@ -12,7 +13,21 @@ UPDATE_SETTINGS_NAME = "update_settings.json"
 
 
 def get_app_support_dir() -> Path:
-    return Path.home() / "Library" / "Application Support" / APP_NAME
+    if sys.platform == "darwin":
+        base_dir = Path.home() / "Library" / "Application Support"
+    elif sys.platform == "win32":
+        appdata_dir = os.getenv("APPDATA") or os.getenv("LOCALAPPDATA")
+        base_dir = Path(appdata_dir) if appdata_dir else Path.home() / "AppData" / "Roaming"
+    else:
+        xdg_config_home = os.getenv("XDG_CONFIG_HOME")
+        base_dir = Path(xdg_config_home) if xdg_config_home else Path.home() / ".config"
+    return base_dir / APP_NAME
+
+
+def get_runtime_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
 
 
 def get_update_settings_path() -> Path:
@@ -20,6 +35,8 @@ def get_update_settings_path() -> Path:
 
 
 def get_running_bundle_path(executable_path: Path | None = None) -> Path | None:
+    if sys.platform != "darwin":
+        return None
     candidate = (executable_path or Path(sys.executable)).resolve()
     for parent in candidate.parents:
         if parent.suffix == ".app":
@@ -41,7 +58,10 @@ def get_app_version() -> str:
 
 
 def get_default_update_manifest_candidates() -> tuple[Path, ...]:
-    package_root = Path(__file__).resolve().parent.parent
+    if sys.platform != "darwin":
+        return ()
+
+    package_root = get_runtime_root()
     candidates = [package_root / "releases" / "macos" / UPDATE_MANIFEST_NAME]
 
     bundle_path = get_running_bundle_path()

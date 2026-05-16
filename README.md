@@ -39,6 +39,16 @@ Tai khoan `admin` xem duoc tat ca loai bao cao. Sau khi dang nhap, admin co the 
 
 Neu dong goi thanh `.app`, sau khi mo tren macOS hay chon lai `Thư mục dữ liệu` tro den thu muc project hien tai chua `modules/`.
 
+## Chay app desktop tren Windows
+
+Tu source tren Windows:
+
+```powershell
+python main_windows.py
+```
+
+Ban Windows dung chung giao dien desktop voi macOS de chay bao cao, dang nhap tai khoan va quan ly phan quyen. Phan tu cap nhat trong app hien chi ho tro ban macOS, nhung chuc nang xuat bao cao va mo thu muc ket qua van hoat dong tren Windows 10.
+
 ## Chay CLI
 
 ```bash
@@ -149,6 +159,44 @@ OUTPUT_DIR="$HOME/Applications/Abipha Builds" ./scripts/build_macos_app.sh
 ```
 
 Du lieu Excel van nam o thu muc project ben ngoai app. Sau khi mo app, chi can chon thu muc goc chua `modules/`.
+
+## Build `.exe` cho Windows 10
+
+Build local tren Windows:
+
+```powershell
+.\build_windows.ps1
+```
+
+Hoac:
+
+```cmd
+build_windows.bat
+```
+
+Script se:
+
+- Tao `.venv-build` neu chua co
+- Cai dependency va chay `pytest`
+- Dong goi GUI desktop thanh `dist\windows-package\DMS Reporting.exe`
+- Copy thu muc `modules\` canh file `.exe`
+- Tao goi `dist\dms-reporting-windows-x64.zip`
+
+Mac dinh app se uu tien tim du lieu tai thu muc `modules\abipha` dat canh file `.exe`, nen goi artifact tu GitHub Actions co the chay tren Windows 10 sau khi giai nen.
+
+## Build bang GitHub Actions Windows
+
+Workflow moi:
+
+- File: `.github/workflows/build-windows-app.yml`
+- Runner: `windows-latest`
+- Trigger: `workflow_dispatch`, `push` vao `main`, `pull_request`
+- Artifact: `dms-reporting-windows-x64`
+
+Artifact upload len Actions gom:
+
+- `dist/windows-package/`
+- `dist/dms-reporting-windows-x64.zip`
 
 ## Dong goi goi cap nhat cho app macOS
 
