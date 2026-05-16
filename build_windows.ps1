@@ -1,9 +1,9 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$Python = "python",
     [switch]$SkipTests
 )
+
+$ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $venvDir = Join-Path $projectRoot ".venv-build"
